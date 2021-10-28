@@ -1,0 +1,16 @@
+<mat-card>
+  <mat-card-title>
+    Launcher
+  </mat-card-title>
+  <mat-card-content>
+    <div *ngIf="!loading; else isLoading">
+      <button mat-raised-button color="primary" (click)="launchApp()">Launch</button>
+    </div>
+    <ng-template #isLoading >
+      <div class="loader">
+        <mat-spinner [diameter]="60"></mat-spinner>
+        <h2>Launching</h2>
+      </div>
+    </ng-template>
+  </mat-card-content>
+</mat-card>

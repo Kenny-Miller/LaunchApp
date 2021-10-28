@@ -1,0 +1,22 @@
+.toolbar{
+  background-color: #111;
+  color: #ccc;
+}
+
+.container {
+  margin:50px auto;
+  min-width: 300px;
+  max-width:90%;
+  min-height:300px;
+  display:flex;
+}
+
+.columnOne{
+  margin: 0px 20px;
+  flex-basis:25%
+}
+
+.columnThree{
+  margin: 0px 20px;
+  flex-basis:75%
+}

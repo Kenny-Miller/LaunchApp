@@ -1,0 +1,17 @@
+<mat-card>
+  <mat-card-title>
+    Apps
+  </mat-card-title>
+  <mat-card-content>
+    <div *ngIf="(apps$ | async)?.length; else noApps">
+      <mat-selection-list #list [multiple]="false" (selectionChange)="onSelection($event)">
+        <mat-list-option *ngFor="let name of (apps$ | async)" [value]="name">
+          {{name}} 
+        </mat-list-option>
+      </mat-selection-list> 
+    </div>
+    <ng-template #noApps>
+      No Apps Found
+    </ng-template>
+  </mat-card-content>
+</mat-card>
