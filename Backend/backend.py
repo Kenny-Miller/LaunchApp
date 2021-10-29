@@ -1,3 +1,4 @@
+import socket
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -20,11 +21,17 @@ def get_apps():
   )
   return response
 
-@app.route("/launchApp", methods=['Post'])
+@app.route("/launchApp", methods=['Get'])
 def start_app():
-  data = request.get_json()
-  print(data)
+  #data = request.get_json()
+  #print(data)
 
+  HOST = '127.0.0.1'  # The server's hostname or IP address
+  PORT = 65432        # The port used by the server
+
+  with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    s.sendall(b'Hello, world')
   #Todo start app on each machine
 
   return "", 200
