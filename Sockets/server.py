@@ -7,7 +7,7 @@ class Server():
       self.port = int(port)
       self.running = False
       self.listener = None
-      self.connections = []
+      self.connections = dict()
 
   # Setsup server listener to accept new connections and begin listening for sockets
   def start_server(self) -> None:
@@ -23,7 +23,7 @@ class Server():
       while self.running:
         # Accept connection and handle on seperate thread
         (conn, addr) = self.listener.accept()
-        self.connections.append((conn,addr))
+        self.connections[addr] = (conn, addr, 'undefined')
         thread = threading.Thread(target=self.handle_connection, args=(conn, addr))
         thread.start()
     # Shutting down listener socket seems to throw an error. This is a workaround
@@ -34,7 +34,12 @@ class Server():
   def handle_connection(self, conn, addr) -> None:
     print(f'[CONNECTION] server established a connection with {addr}')
     connected = True
-  
+
+    # Find and set what client mode this is
+    type = Message.recieve_message(conn)
+    self.connections[addr] = (conn,addr,type)
+    print(f'[CLIENT] {addr} is of type {type}')
+
     # Loop until connection is broken
     while connected:
       msg = Message.recieve_message(conn)
@@ -43,7 +48,7 @@ class Server():
       # Socket has been closed
       if not msg:
         print(f'[CLOSE] closing connection to {addr}')
-        self.connections.remove((conn,addr))
+        self.connections.pop(addr)
         conn.shutdown(socket.SHUT_RDWR)
         conn.close()
         connected = False
@@ -53,20 +58,32 @@ class Server():
         connected = False
       # Normal message has been recieved
       else:
-        pass
+        args = msg.split(" ")
+        if len(args) == 2:
+          type = 'all'
+          self.broadcast_message(msg,type)
+        else:
+          type = args[2]
+          ms = args[0] + args[1]
+          self.broadcast_message(ms, type)
+
      
   # Closes all connections and stops listening for new connections
   def shutdown_sever(self) -> None:
     print(f'[SHUTDOWN] shutting down server')
-    for (conn, addr) in self.connections:
-      conn.shutdown(socket.SHUT_RDWR)
-      conn.close()
-      self.running = False
     self.listener.close()
+    self.running = False
+    for (key, val) in self.connections.items():
+      val[0].shutdown(socket.SHUT_RDWR)
+      val[0].close()
 
-  # Sends a message to all clients. ignr is a list of (conn,addr) you don't want to send to
-  def broadcast_message(msg, ignr=None) -> None:
-    pass
+  # Sends a message to all clients. type is a list of (conn,addr) you want to send to
+  def broadcast_message(self, msg, type) -> None:
+    for (key, val) in self.connections.items():
+      if(val[2] != 'user' and type == 'all'):
+        Message.send_message(val[0],msg)
+      elif(val[2] == type):
+        Message.send_message(val[0],msg)
 
 server = Server()
 server.start_server()
