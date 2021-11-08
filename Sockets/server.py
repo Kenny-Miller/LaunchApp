@@ -58,16 +58,16 @@ class Server():
         connected = False
       # Normal message has been recieved
       else:
+        # Determine which clients to send it to
         args = msg.split(" ")
-        if len(args) == 2:
-          type = 'all'
-          self.broadcast_message(msg,type)
-        else:
-          type = args[2]
-          ms = args[0] + args[1]
-          self.broadcast_message(ms, type)
+        type = args[len(args)-1]
+        # Rebuilds message without client type and broadcasts it
+        ms = ''
+        for i in range(len(args)-1):
+          ms += args[i]
+          ms += " "
+        self.broadcast_message(ms, type)
 
-     
   # Closes all connections and stops listening for new connections
   def shutdown_sever(self) -> None:
     print(f'[SHUTDOWN] shutting down server')

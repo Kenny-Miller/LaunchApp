@@ -1,6 +1,6 @@
 import socket, sys, re
+import vlc
 from message import Message
-
 
 # Determine which mode to run in
 # User mode is a one-way connection that allows you to send commands to the server
@@ -43,6 +43,7 @@ class Client():
         # Other modes will recieve commands from server
         else:
           msg = Message.recieve_message(self.conn)
+          print(f'[Message] recieved message: {msg} from server')
           if not msg:
             print(f'[CLOSE] server closed connection')
             self.conn.shutdown(socket.SHUT_RDWR)
@@ -50,36 +51,50 @@ class Client():
             self.running = False
           else:
             self.handle_message(msg)
+
     except KeyboardInterrupt:
-      pass
+      print('[USER] user stopped client')
+    except Exception as e:
+      print(f'[ERROR] an error has occurerd, {e}')
     print('[CONNECTION] terminating connection bewteen client and server')
     self.conn.close()
 
-  def handle_command(self, cmd):
+  def handle_command(self, cmd) -> None:
     # disconnect user client from server
+    # server and other clients will not be affected
     if cmd.lower() in ['stop', 's']:
       self.running = False
     # shut server down
+    # server will close conections with all other clients
     elif cmd.lower() in ['shutdown', 'sd']:
       self.running = False
       Message.send_message(self.conn,'shutdown')
-    # launch app on clients
-    elif 'launch' in cmd.lower():
-      if self.validate_command(cmd):
-        Message.send_message(self.conn,cmd)
-      else:
-        print('[COMMAND] comand must match format')
-        print('[COMMAND] launch appname [client=all|left|middle|right]')
+    # prints all current command uses
+    elif cmd.lower() in ['help', 'h']:
+      self.print_command_list()
+    # non-special command
+    elif self.validate_command(cmd.lower()):
+        Message.send_message(self.conn,cmd)        
     else:
       print('[COMMAND] invalid command')
+      print('[COMMAND] type help or h for a full list of commands')
   
   def validate_command(self,cmd) -> bool:
-    regex = 'launch [a-z]+( client=(all|left|middle|right)){0,1}'
+    #regex = 'launch [a-z]+( client=(all|left|middle|right)){0,1}'
+    regex = 'vlc \w+ all|left|middle|right'
     return re.match(regex,cmd)
 
-  def handle_message(self, msg):
-    print(msg)
-    pass
+  def print_command_list(self) -> None:
+    print('[HELP] help (h)')
+    print('[HELP] stop (s)')
+    print('[HELP] shutdown (sd)')
+    print('[HELP] vlc <filename> all|left|middle|right')
+
+  def handle_message(self, msg) -> None:
+    if re.match('vlc \w+', msg):
+      pass
+    else:
+      print('Not implemented yet')
 
 client = Client(mode=get_mode())
 client.start_client()
