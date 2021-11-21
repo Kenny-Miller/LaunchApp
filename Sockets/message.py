@@ -22,5 +22,4 @@ class Message():
     send_length += b' ' * (cls.HEADER - len(send_length))
     conn.send(send_length)
     conn.send(message)
-
-
+    
