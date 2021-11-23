@@ -44,6 +44,7 @@ class Server():
           self.handle_read(key.fileobj, key.data, mask)
           self.handle_write(key.fileobj, key.data, mask)
     
+  # Handles listener accepting and creating new socket connections
   def accept_connection(self,sock):
     (conn, addr) = sock.accept()
     self.logger.debug(f'[CONNECTION] server established a connection with {addr}')
@@ -53,31 +54,49 @@ class Server():
     self.selector.register(conn, events, data)
     self.connections[addr] = data
 
+  # Handles recieving a message from a client
   def handle_read(self, conn, data, mask):
     if mask & selectors.EVENT_READ:
       msg = conn.recv(1024).decode('utf-8')
       self.logger.debug(f'[MESSAGE] recieve message "{msg}" from {data.addr}')
+      # Socket is closed if msg is empty
       if not msg:
         self.logger.debug(f'[CLOSE] closing connection to {data.addr}')
         del self.connections[data.addr]
         self.selector.unregister(conn)
         conn.shutdown(socket.SHUT_RDWR)
         conn.close()
-      if msg == 'shutdown':
-        self.shutdown_sever()       
-      if msg == 'echo':
-        data.msg_queue.put(msg)
+      else:
+        cmd = msg.split(" ")[0]
+        # Handle messages    
+        if cmd == 'shutdown':
+          self.shutdown_sever()
+        elif cmd == 'type':
+          client_type = self.parse_msg_arg(msg, 'type=')
+          data.type = client_type
+        else:
+          client_type = self.parse_msg_arg(msg, 'client=')
+          if client_type == '':
+            client_type = 'all'
+          self.create_outbound_message(msg, client_type)
+  
+  # Parses a message for its arg value
+  # Ex ('vlc action=load client=all', 'client=') returns 'all'
+  def parse_msg_arg(self, msg, search_arg) -> str:
+    args = msg.split(" ")
+    arg_val = ""
+    for arg in args:
+      if search_arg in arg:
+        arg_val = arg.split(search_arg)[1]
+    return arg_val
 
+  # Handles sending messages to a client
   def handle_write(self, conn, data, mask):
     if mask & selectors.EVENT_WRITE:
-      try:
-        outbound_msg = data.msg_queue.get_nowait()
-      except queue.Empty:
-        pass
-      else:
-        self.broadcast_message(outbound_msg)
-        #msg = outbound_msg.encode('utf-8')
-        #conn.send(msg)
+      if not data.msg_queue.empty():
+        msg = data.msg_queue.get_nowait()
+        outbound_msg = msg.encode('utf-8')
+        conn.send(outbound_msg)
 
   # Closes all connections and stops running for new connections
   def shutdown_sever(self) -> None:
@@ -93,20 +112,16 @@ class Server():
       self.selector.unregister(conn)
     self.connections = {}  
 
-  # Sends a message to all clients of specified type: msg_type.
-  def broadcast_message(self, msg) -> None:
-    #msg_type = msg.split("client=")[1]
-    msg_type = 'all'
+  # Adds message to outbound queue for all clients of specified type: msg_type.
+  def create_outbound_message(self, msg, client_type) -> None:
+    self.logger.debug('[Message] sending message {msg} to {client_type} clients')
     for (key, val) in self.connections.items():
-      conn = val.conn
-      conn_type = val.type
-      #if(msg_type != 'user' and conn_type == 'all'):
-       # msg = msg.encode('utf-8')
-      #  conn.send(msg)
-      #if(msg_type == conn_type):
-      outbound_msg = msg.encode('utf-8')
-      conn.send(outbound_msg)
-
+      conn_type= val.type
+      msg_queue = val.msg_queue
+      if conn_type != 'user' and client_type == 'all':
+        msg_queue.put(msg)
+      elif conn_type == client_type:
+        msg_queue.put(msg)
 
 def main():
   server = Server(host='192.168.50.36')
