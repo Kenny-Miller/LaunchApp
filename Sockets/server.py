@@ -2,6 +2,8 @@ import socket, logging, types, queue, selectors
 from logging import Logger
 from types import SimpleNamespace
 
+from message import Message
+
 class Server():
   def __init__(self, host='127.0.0.1', port='5050') -> None:
     self.host = host 
@@ -9,19 +11,8 @@ class Server():
     self.selector = selectors.DefaultSelector()
     self.running = False
     self.listener = None
-    self.logger = self.create_logger()
+    self.logger = Message.create_logger('server')
     self.connections = {}
-
-  # Configure the logger the server uses
-  def create_logger(self) -> Logger:
-    logger = logging.getLogger('server')
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    return logger
 
   # Sets up server listener to accept new connections and begin running for sockets
   def start_server(self) -> None:
@@ -57,7 +48,7 @@ class Server():
   # Handles recieving a message from a client
   def handle_read(self, conn, data, mask):
     if mask & selectors.EVENT_READ:
-      msg = conn.recv(1024).decode('utf-8')
+      msg = Message.recieve_message(conn=conn)
       self.logger.debug(f'[MESSAGE] recieve message "{msg}" from {data.addr}')
       # Socket is closed if msg is empty
       if not msg:
@@ -72,31 +63,19 @@ class Server():
         if cmd == 'shutdown':
           self.shutdown_sever()
         elif cmd == 'type':
-          client_type = self.parse_msg_arg(msg, 'type=')
-          data.type = client_type
+          data.type = Message.parse_msg_arg(msg, 'type=')
         else:
-          client_type = self.parse_msg_arg(msg, 'client=')
+          client_type = Message.parse_msg_arg(msg, 'client=')
           if client_type == '':
             client_type = 'all'
           self.create_outbound_message(msg, client_type)
   
-  # Parses a message for its arg value
-  # Ex ('vlc action=load client=all', 'client=') returns 'all'
-  def parse_msg_arg(self, msg, search_arg) -> str:
-    args = msg.split(" ")
-    arg_val = ""
-    for arg in args:
-      if search_arg in arg:
-        arg_val = arg.split(search_arg)[1]
-    return arg_val
-
   # Handles sending messages to a client
   def handle_write(self, conn, data, mask):
     if mask & selectors.EVENT_WRITE:
       if not data.msg_queue.empty():
         msg = data.msg_queue.get_nowait()
-        outbound_msg = msg.encode('utf-8')
-        conn.send(outbound_msg)
+        Message.send_message(conn=conn,msg=msg)
 
   # Closes all connections and stops running for new connections
   def shutdown_sever(self) -> None:
@@ -114,7 +93,7 @@ class Server():
 
   # Adds message to outbound queue for all clients of specified type: msg_type.
   def create_outbound_message(self, msg, client_type) -> None:
-    self.logger.debug('[Message] sending message {msg} to {client_type} clients')
+    self.logger.debug(f'[Message] sending message "{msg}" to "{client_type}" clients')
     for (key, val) in self.connections.items():
       conn_type= val.type
       msg_queue = val.msg_queue
