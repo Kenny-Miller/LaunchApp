@@ -1,11 +1,23 @@
-import socket, logging, types, queue, selectors
-from logging import Logger
+import socket, types, queue, selectors
 from types import SimpleNamespace
 
 from message import Message
 
 class Server():
+  """
+  Class for server tcp implementation
+
+  Creates a server that is able to handle connections from multiple clients. Server is 'dumb' and
+  only recieves a message and then sends it to the correct client from them to handle.
+  """
+
   def __init__(self, host='127.0.0.1', port='5050') -> None:
+    """
+    Constructor for the Server
+
+    host: what address server is running on
+    port: what port server is running on
+    """
     self.host = host 
     self.port = int(port)
     self.selector = selectors.DefaultSelector()
@@ -16,6 +28,9 @@ class Server():
 
   # Sets up server listener to accept new connections and begin running for sockets
   def start_server(self) -> None:
+    """
+    Sets up the server listener to accept new connections and handles messages to and from sockets
+    """
     self.logger.debug('[STARTUP] starting server')
     self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.listener.bind((self.host, self.port))
@@ -35,8 +50,10 @@ class Server():
           self.handle_read(key.fileobj, key.data, mask)
           self.handle_write(key.fileobj, key.data, mask)
     
-  # Handles listener accepting and creating new socket connections
   def accept_connection(self,sock):
+    """
+    Handles listener accepting and creating new socket connections
+    """
     (conn, addr) = sock.accept()
     self.logger.debug(f'[CONNECTION] server established a connection with {addr}')
     conn.setblocking(False)
@@ -45,13 +62,15 @@ class Server():
     self.selector.register(conn, events, data)
     self.connections[addr] = data
 
-  # Handles recieving a message from a client
   def handle_read(self, conn, data, mask):
+    """
+    Recieves a message from a client and handles it
+    """
     if mask & selectors.EVENT_READ:
       msg = Message.recieve_message(conn=conn)
-      self.logger.debug(f'[MESSAGE] recieve message "{msg}" from {data.addr}')
-      # Socket is closed if msg is empty
+      self.logger.debug(f'[MESSAGE] recieve message "{msg}" from {data.addr}')      
       if not msg:
+        # Socket is closed if msg is empty
         self.logger.debug(f'[CLOSE] closing connection to {data.addr}')
         del self.connections[data.addr]
         self.selector.unregister(conn)
@@ -59,26 +78,31 @@ class Server():
         conn.close()
       else:
         cmd = msg.split(" ")[0]
-        # Handle messages    
         if cmd == 'shutdown':
           self.shutdown_sever()
         elif cmd == 'type':
+          # Sets the each client connetion's type
           data.type = Message.parse_msg_arg(msg, 'type=')
         else:
+          # Determine which clients to broadcast message to
           client_type = Message.parse_msg_arg(msg, 'client=')
           if client_type == '':
             client_type = 'all'
           self.create_outbound_message(msg, client_type)
   
-  # Handles sending messages to a client
   def handle_write(self, conn, data, mask):
+    """
+    Handles sending messages to a client
+    """
     if mask & selectors.EVENT_WRITE:
       if not data.msg_queue.empty():
         msg = data.msg_queue.get_nowait()
         Message.send_message(conn=conn,msg=msg)
 
-  # Closes all connections and stops running for new connections
   def shutdown_sever(self) -> None:
+    """
+    Closes all connections and stops running for new connections
+    """
     self.listener.close()
     self.selector.unregister(self.listener)
     self.logger.debug(f'[SHUTDOWN] shutting down server')
@@ -91,8 +115,10 @@ class Server():
       self.selector.unregister(conn)
     self.connections = {}  
 
-  # Adds message to outbound queue for all clients of specified type: msg_type.
   def create_outbound_message(self, msg, client_type) -> None:
+    """
+    Adds message to outbound queue for all clients of specified type: msg_type.
+    """
     self.logger.debug(f'[Message] sending message "{msg}" to "{client_type}" clients')
     for (key, val) in self.connections.items():
       conn_type= val.type
