@@ -1,23 +1,33 @@
 import logging
 
 class Message():
-  # Handles recieving messages. Assumes two messages will be sent.
-  # One message with message length and one message with message content.
+  """
+  Message class offers static methods to help with reading and writings messages
+  between clients and servers.
+  """
+
   @classmethod
   def recieve_message(cls, conn) -> str:
+    """
+    Recives a message from the server
+    """
     return conn.recv(1024).decode('utf-8')
 
-  # Handles sending messages. Sends two messages at a time
-  # One message wtih message length and one message with message content.
   @classmethod
   def send_message(cls, conn, msg) -> None:
+    """
+    Sends a message to the server
+    """
     message = msg.encode('utf-8')
     conn.send(message)
 
-  # Parses a message for its arg value
-  # Ex ('vlc action=load client=all', 'client=') returns 'all'
   @classmethod
   def parse_msg_arg(cls, msg, search_arg) -> str:
+    """
+    Parses a message for its arg value
+
+    Ex ('vlc action=load client=all', 'client=') returns 'all'
+    """
     args = msg.split(" ")
     arg_val = ""
     for arg in args:

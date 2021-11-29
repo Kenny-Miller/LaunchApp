@@ -1,5 +1,4 @@
 from client import Client
-import helper
 from message import Message
 
 class UserClient(Client):
