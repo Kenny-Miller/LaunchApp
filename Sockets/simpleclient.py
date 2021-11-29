@@ -4,6 +4,13 @@ from message import Message
 from videoplayer import VideoPlayer
 
 class SimpleClient(Client):
+  """
+  SimpleClient is a tcp client implementation
+
+  Connects and recieve commands from a specified server. In addition is able to launch a mediaplayer
+  that can be synced with other clients connected to the same server.
+  """
+
   def __init__(self, server='127.0.0.1', port='5050', type='middle') -> None:
     """
     Constructor for the SimpleClient
@@ -30,9 +37,12 @@ class SimpleClient(Client):
       
     self.close_connection()
 
-  # Handles messages pertaining to vlc
-  # In format of 'vlc action=<> client=<> [filename=<>]
   def handle_vlc_message(self, msg) -> None:
+    """
+    Handles messages pertaining to vlc
+
+    In format of 'vlc action=<> client=<> [filename=<>]
+    """
     action = Message.parse_msg_arg(msg,'action=')
     if action == 'init':
       self.videoplayer = VideoPlayer()
@@ -44,15 +54,19 @@ class SimpleClient(Client):
       self.videoplayer.pause_media()
     elif action == 'load':
       filename = Message.parse_msg_arg(msg, 'filename=')
+      self.logger.debug(f'[Load] loading media file: {filename}')
       self.videoplayer.load_media(filename)
     elif action == 'exit':
       self.videoplayer.exit_player()
       self.videoplayer = None
 
-# Determine which type to run in
-# User type is a one-way connection that allows you to send commands to the server
-# Auto type is a two-way connection that waits for messages from server
 def get_type():
+  """
+  Determines which type this client is based on cmd args.
+
+  Each type corresponds with what wall the client is running on. Commands from server
+  will be sent to each client based on their type
+  """
   type = 'middle'
   if len(sys.argv) > 1:
     arg = sys.argv[1].lower()

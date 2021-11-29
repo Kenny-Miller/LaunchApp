@@ -45,8 +45,9 @@ testem.log
 Thumbs.db
 
 # py
-/Backend/__pycache__
+/Backend/__pycache__/*
 Examples/main.py
 Examples/mini_player.py
 Examples/network.py
-Examples/__pycache__/network.cpython-39.pyc
+Examples/__pycache__/*
+Sockets/__pycache__/*

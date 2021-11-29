@@ -12,6 +12,13 @@ class Client(metaclass=ABCMeta):
   
   @abstractmethod
   def __init__(self, server, port, type) -> None:
+    """
+    Constructor for the Client
+
+    server: server address client is conencting to
+    port: server port client is connecting to
+    type: what type of client this is [user|left|middle|right]
+    """
     self.server = server
     self.port = int(port)
     self.type = type

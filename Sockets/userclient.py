@@ -3,6 +3,12 @@ import helper
 from message import Message
 
 class UserClient(Client):
+  """
+  UserClient is a tcp client implementation that allows user input
+
+  Connects to a specified server and creates terminal for the user to send commands to other
+  clients connected to the server
+  """
 
   def __init__(self, server='127.0.0.1', port='5050') -> None:
     """
@@ -18,28 +24,23 @@ class UserClient(Client):
     """
     self.establish_connection()
     while self.running:
-        cmd = input("Please enter command: ").lower()
-        # disconnect user client from server
-        # server and other clients will not be affected
-        if cmd.lower() in ['stop', 's']:
-          self.running = False
-        # shut server down
-        # server will close conections with all other clients
-        elif cmd.lower() in ['shutdown', 'sd']:
-          self.running = False
-          Message.send_message(conn=self.conn, msg='shutdown')
-        # prints all current command uses
-        elif cmd.lower() in ['help', 'h']:
-          helper.print_valid_cmd_list()
-        # non-special command
-        elif cmd.lower() == 'vlc':
-          self.handle_vlc_commands()
-        # sends a test message
-        elif cmd.lower() == 'test':
-          self.conn.send('test'.encode('utf-8'))
-        else:
-          print('[COMMAND] invalid command')
-          print('[COMMAND] type help or h for a full list of commands')
+      cmd = input("Please enter command: ").lower()
+      if cmd in ['stop', 's']:
+        # Closes client connection, but server still runs
+        self.running = False
+      elif cmd in ['shutdown', 'sd']:
+        # Terminates server and all client connections
+        self.running = False
+        Message.send_message(conn=self.conn, msg='shutdown')
+      elif cmd.lower() == 'vlc':
+        # Puts user client in vlc mode
+        self.handle_vlc_commands()
+      elif cmd.lower() == 'test':
+        # Sends a test message to echo on all connected clients
+        Message.send_message(conn=self.conn, msg='test')
+      else:
+        print('[COMMAND] invalid command')
+
     self.close_connection()
 
   def handle_vlc_commands(self) -> None:
