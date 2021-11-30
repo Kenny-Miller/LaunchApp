@@ -78,7 +78,12 @@ def get_type():
   return type  
 
 def main():
-  client = SimpleClient(server='192.168.50.36',type=get_type())
+  if len(sys.argv) <= 3:
+    print("Invalid Command:")
+    print("Use $ simpleclient.py <addr> port=<> type=<>")
+    exit(0)
+
+  client = SimpleClient(server=sys.arv[1],port=sys.arv[2],type=sys.arv[3])
   client.handle()
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-import socket, types, queue, selectors
+import socket, types, queue, selectors, sys
 from types import SimpleNamespace
 
 from message import Message
@@ -129,7 +129,12 @@ class Server():
         msg_queue.put(msg)
 
 def main():
-  server = Server(host='192.168.50.36')
+  if len(sys.argv) <= 2:
+    print("Invalid Command:")
+    print("Use $ server.py <addr> port=<>")
+    exit(0)
+
+  server = Server(host=sys.argv[1], port=sys.argv[2])
   server.start_server()
 
 if __name__ == "__main__":

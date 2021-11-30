@@ -1,3 +1,4 @@
+import sys
 from client import Client
 from message import Message
 
@@ -64,7 +65,12 @@ class UserClient(Client):
     self.logger.info('[Mode] exiting vlc mode')
 
 def main():
-  client = UserClient(server='192.168.50.36')
+  if len(sys.argv) <= 2:
+    print("Invalid Command:")
+    print("Use $ userclient.py <addr> port=<>")
+    exit(0)
+
+  client = UserClient(server=sys.argv[1], port=sys.argv[2])
   client.handle()
 
 if __name__ == "__main__":
