@@ -1,61 +1,48 @@
-import vlc
+from abc import abstractmethod
+from vlc import Instance
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import (
+  QWidget,
+  QVBoxLayout,
+  QFrame,
+  QMainWindow
+)
 
-class VideoPlayer():
-  def __init__(self) -> None:
-    self.media_player = vlc.MediaPlayer()
+class VideoPlayer(QMainWindow):
+  def __init__(self, parent=None, data_queue=None):
+    super().__init__(parent)
+    self.data_queue=data_queue
+    self.instance = Instance()
+    self.media_player = self.instance.media_player_new()
     self.media = None
-   #self.media_player.set_fullscreen(True)
+    self.timer = QTimer(self)
+    self.timer.setInterval(25)
+    self.timer.timeout.connect(self.handle)
 
-  def load_media(self, file):    
-    self.media = vlc.Media(file)
+  def _createUI(self):
+    self.widget = QWidget(self)
+    self.setCentralWidget(self.widget)
+    self.videoframe = QFrame()
+    self.vboxlayout = QVBoxLayout()
+    self.vboxlayout.addWidget(self.videoframe)
+    self.widget.setLayout(self.vboxlayout)
+
+  def openFile(self, filepath):
+    self.media = self.instance.media_new(filepath)
     self.media_player.set_media(self.media)
+    self.media.parse()
+    self.media_player.set_hwnd(int(self.videoframe.winId()))
 
-  def play_media(self):
+  def play(self):  
     self.media_player.play()
 
-  def pause_media(self):
+  def pause(self):
     self.media_player.pause()
 
-  def exit_player(self):
-    self.media_player.stop()
-
-  def fullscreen_player(self):
-    self.media_player.toggle_fullscreen()
-
-  def get_crop(self):
-    print(self.media_player.video_get_crop_geometry())
+  def setTime(self, time):
+    self.media_player.set_time(time)
   
-  def crop(self, geometry):
-    # 120x120+10+10
-    # 120x120 is the wanted resolution (in pixels), and 10+10 is the top-left position where the cropping should start (in pixels)
-    self.media_player.video_set_crop_geometry(geometry)
+  @abstractmethod
+  def handle(self):
+    raise NotImplementedError()
 
-  # Start video player to run with command line input
-  def start_player(self):
-    running = True
-    while running:
-      command = input("Input command: ")
-      if command == 'play':
-        self.play_media()
-      elif command == 'pause':
-        self.pause_media()
-      elif command == 'load':
-        file = input("Please specify file location: ")
-        file = "sample.mp4"
-        self.load_media(file)
-      elif command == 'resize':
-        self.fullscreen_player()
-      elif command == 'exit':
-        running = False
-      elif command == 'info':
-        self.get_crop()
-      elif command == 'crop':
-        geometry = input('Input crop geometry: ')
-        self.crop(geometry)
-  
-def main():
-  player = VideoPlayer()
-  player.start_player()
-
-if __name__ == "__main__":
-  main()
